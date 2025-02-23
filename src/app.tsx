@@ -1,39 +1,78 @@
-import { useState } from 'react';
-import viteLogo from '/vite.svg';
-import reactLogo from './assets/react.svg';
-import './App.css';
+import { Player, PlayerProps } from '@components/player';
+import { ChangeEvent, useState } from 'react';
 
-function App() {
-	const [count, setCount] = useState(0);
+export default function App() {
+	const [currentQuality, setCurrentQuality] = useState('');
+	const [quality, setQuality] = useState(-1);
+	const [qualityOptions, setQualityOptions] = useState([
+		{ label: 'Авто', value: -1 },
+	]);
+	const [url, setUrl] = useState(
+		'/hls/solo-leveling-compilation/manifest.m3u8'
+	);
+
+	const handleClick = (quality: number) => {
+		setQuality(quality);
+	};
+
+	const handleParsed: PlayerProps['onManifestParsed'] = (data) => {
+		console.log('Manifest loaded:', data);
+		setQualityOptions([
+			{ label: 'Авто', value: -1 },
+			...data.levels.map((level, index) => ({
+				label: `${level.height}p`,
+				value: index,
+			})),
+		]);
+	};
+
+	const handleLevelChange: PlayerProps['onLevelSwitched'] = (data, level) => {
+		console.log('Level switched:', data);
+		console.log('Current level:', level);
+		setCurrentQuality(`${level.height}p`);
+	};
+
+	const handleUrlChange = (e: ChangeEvent<HTMLInputElement>) => {
+		setUrl(e.currentTarget.value);
+	};
 
 	return (
 		<>
-			<div>
-				<a href='https://vite.dev' target='_blank'>
-					<img src={viteLogo} className='logo' alt='Vite logo' />
-				</a>
-				<a href='https://react.dev' target='_blank'>
-					<img
-						src={reactLogo}
-						className='logo react'
-						alt='React logo'
-					/>
-				</a>
+			<img src={'MIRIX.svg'} alt={''} />
+			<Player
+				config={{ maxBufferLength: 10 }}
+				url={url}
+				level={quality}
+				onManifestParsed={handleParsed}
+				onLevelSwitched={handleLevelChange}
+			/>
+			<input value={url} onChange={handleUrlChange} />
+			<div
+				style={{
+					background: 'black',
+					color: 'white',
+					padding: 24,
+					borderRadius: 16,
+					fontSize: 32,
+				}}
+			>
+				quality: {currentQuality}
 			</div>
-			<h1>Vite + React</h1>
-			<div className='card'>
-				<button onClick={() => setCount((count) => count + 1)}>
-					count is {count}
+			{qualityOptions.map((option) => (
+				<button
+					key={option.value}
+					style={{
+						padding: '9px 12px',
+						fontSize: 14,
+						lineHeight: 1,
+						borderColor:
+							option.value === quality ? 'red' : undefined,
+					}}
+					onClick={() => handleClick(option.value)}
+				>
+					{option.label}
 				</button>
-				<p>
-					Edit <code>src/App.tsx</code> and save to test HMR
-				</p>
-			</div>
-			<p className='read-the-docs'>
-				Click on the Vite and React logos to learn more
-			</p>
+			))}
 		</>
 	);
 }
-
-export default App;
