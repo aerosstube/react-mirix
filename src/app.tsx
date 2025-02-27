@@ -74,7 +74,17 @@ export default function App() {
 	};
 
 	const handleFullScreen = async () => {
-		await videoRef.current?.requestFullscreen();
+		const video = videoRef.current;
+		if (!video) return;
+
+		// @ts-ignore
+		if (video.webkitEnterFullscreen) {
+			// @ts-ignore
+			video.webkitEnterFullscreen();
+		} else {
+			// Для остальных браузеров
+			await video.requestFullscreen();
+		}
 	};
 
 	return (

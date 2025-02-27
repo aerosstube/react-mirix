@@ -291,6 +291,7 @@ export const Player: FC<PlayerProps> = ({
 				backgroundColor: 'black',
 			}}
 			controls={controls}
+			playsInline
 			{...rest}
 		>
 			<code>video</code> is not supported.
