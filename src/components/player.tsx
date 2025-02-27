@@ -51,9 +51,12 @@ import Hls, {
 	SubtitleTrackSwitchData,
 	TrackLoadingData,
 } from 'hls.js';
+import { MaxAutoLevelUpdatedData } from 'hls.js/dist/hls.js';
 import {
 	DetailedHTMLProps,
 	FC,
+	HTMLAttributes,
+	RefObject,
 	VideoHTMLAttributes,
 	useEffect,
 	useRef,
@@ -108,7 +111,7 @@ export interface PlayerEvents {
 	onFragChanged?: (data: FragChangedData) => void;
 	onFPSDrop?: (data: FPSDropData) => void;
 	onFPSDropLevelCapping?: (data: FPSDropLevelCappingData) => void;
-	onMaxAutoLevelUpdated?: (data: any) => void;
+	onMaxAutoLevelUpdated?: (data: MaxAutoLevelUpdatedData) => void;
 	onHLSError?: (data: ErrorData) => void;
 	onDestroying?: () => void;
 	onKeyLoading?: (data: KeyLoadingData) => void;
@@ -124,12 +127,23 @@ export interface PlayerProps
 			HTMLVideoElement
 		>,
 		PlayerEvents {
+	ref?: RefObject<HTMLVideoElement | null>;
+	hlsRef?: RefObject<Hls | null>;
+	containerRef?: RefObject<HTMLDivElement | null>;
+	container?: DetailedHTMLProps<
+		HTMLAttributes<HTMLDivElement>,
+		HTMLDivElement
+	>;
 	config?: Partial<HlsConfig>;
 	url?: string;
 	level?: number;
 }
 
 export const Player: FC<PlayerProps> = ({
+	ref: videoRefProp,
+	hlsRef: hlsRefProp,
+	containerRef,
+	container,
 	config,
 	url = '',
 	level = -1,
@@ -194,11 +208,12 @@ export const Player: FC<PlayerProps> = ({
 	const videoRef = useRef<HTMLVideoElement>(null);
 	const hlsRef = useRef<Hls | null>(null);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(
 		() =>
 			hlsInit({
-				hlsRef,
-				videoRef,
+				hlsRef: hlsRefProp ?? hlsRef,
+				videoRef: videoRefProp ?? videoRef,
 				url,
 				config,
 				onMediaAttaching,
@@ -264,15 +279,20 @@ export const Player: FC<PlayerProps> = ({
 	useEffect(() => hlsChangeLevel(hlsRef, level), [level]);
 
 	return (
-		<>
+		<div ref={containerRef} {...container}>
 			<video
-				ref={videoRef}
-				controls
-				style={{ width: '100%', height: 'auto' }}
+				ref={videoRefProp ?? videoRef}
+				style={{
+					width: '100%',
+					height: '100%',
+					aspectRatio: '16 / 9',
+					objectFit: 'contain',
+					backgroundColor: '#000',
+				}}
 				{...rest}
 			>
 				<code>video</code> is not supported.
 			</video>
-		</>
+		</div>
 	);
 };
