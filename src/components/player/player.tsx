@@ -60,7 +60,6 @@ import {
 	useEffect,
 	useRef,
 } from 'react';
-import './player.css';
 
 export interface PlayerEvents {
 	onMediaAttaching?: (data: MediaAttachingData) => void;
@@ -137,11 +136,9 @@ export interface PlayerProps
 export const Player: FC<PlayerProps> = ({
 	ref: videoRefProp,
 	hlsRef: hlsRefProp,
-	className,
 	config,
 	url = '',
 	level = -1,
-	controls,
 	onMediaAttaching,
 	onMediaAttached,
 	onMediaDetaching,
@@ -276,25 +273,15 @@ export const Player: FC<PlayerProps> = ({
 	return (
 		<video
 			ref={videoRefProp ?? videoRef}
-			className={
-				!controls
-					? className
-						? `hide-player-controls ${className}`
-						: 'hide-video-controls'
-					: className
-			}
 			style={{
 				width: '100%',
 				height: '100%',
 				aspectRatio: '16 / 9',
 				objectFit: 'contain',
-				backgroundColor: 'black',
+				backgroundColor: '#000',
 			}}
-			controls={controls}
 			playsInline
 			{...rest}
-		>
-			<code>video</code> is not supported.
-		</video>
+		/>
 	);
 };

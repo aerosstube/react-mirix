@@ -1,10 +1,12 @@
 import { Player, PlayerProps } from '@components/player';
+import { formatTime } from '@lib/format-time';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 
 export default function App() {
 	const videoRef = useRef<HTMLVideoElement>(null);
+	const containerRef = useRef<HTMLDivElement>(null);
 	const [currentQuality, setCurrentQuality] = useState('');
-	const [quality, setQuality] = useState(-1);
+	const [level, setLevel] = useState(-1);
 	const [qualityOptions, setQualityOptions] = useState([
 		{ label: 'Авто', value: -1 },
 	]);
@@ -22,24 +24,14 @@ export default function App() {
 			setCurrentTime(video.currentTime);
 		};
 
-		// Добавляем обработчик события 'timeupdate'
 		video.addEventListener('timeupdate', handleTimeUpdate);
 
-		// Очистка обработчика при размонтировании компонента
 		return () => {
 			if (video) {
 				video.removeEventListener('timeupdate', handleTimeUpdate);
 			}
 		};
 	}, []);
-
-	const formatTime = (time: number | undefined) => {
-		if (time === undefined || isNaN(time)) return '--:--';
-
-		const minutes = Math.floor(time / 60);
-		const seconds = Math.floor(time % 60);
-		return `${`${minutes}`.padStart(2, '0')}:${`${seconds}`.padStart(2, '0')}`;
-	};
 
 	const handleSeek = (event: ChangeEvent<HTMLInputElement>) => {
 		if (videoRef.current) {
@@ -48,8 +40,8 @@ export default function App() {
 		}
 	};
 
-	const handleClick = (quality: number) => {
-		setQuality(quality);
+	const handleClick = (level: number) => {
+		setLevel(level);
 	};
 
 	const handleParsed: PlayerProps['onManifestParsed'] = (data) => {
@@ -74,30 +66,31 @@ export default function App() {
 	};
 
 	const handleFullScreen = async () => {
+		const container = containerRef.current;
 		const video = videoRef.current;
-		if (!video) return;
+		if (!(video && container)) return;
 
-		// @ts-ignore
-		if (video.webkitEnterFullscreen) {
+		if (navigator.userAgent.indexOf('iPhone') !== -1) {
 			// @ts-ignore
-			video.webkitEnterFullscreen();
+			await video.webkitEnterFullscreen();
 		} else {
-			// Для остальных браузеров
-			await video.requestFullscreen();
+			await container.requestFullscreen();
 		}
 	};
 
 	return (
 		<>
 			<img src={'MIRIX.svg'} alt={''} />
-			<div style={{ width: '100%' }}>
+			<div ref={containerRef} style={{ width: '100%' }}>
 				<Player
 					ref={videoRef}
 					url={url}
-					level={quality}
+					level={level}
 					onManifestParsed={handleParsed}
 					onLevelSwitched={handleLevelChange}
-				/>
+				>
+					<code>video</code> is not supported.
+				</Player>
 			</div>
 			<button
 				onClick={() =>
@@ -132,8 +125,7 @@ export default function App() {
 						padding: '9px 12px',
 						fontSize: 14,
 						lineHeight: 1,
-						borderColor:
-							option.value === quality ? 'red' : undefined,
+						borderColor: option.value === level ? 'red' : undefined,
 					}}
 					onClick={() => handleClick(option.value)}
 				>

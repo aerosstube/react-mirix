@@ -58,5 +58,8 @@ export default (args: ViteConfigInput) => {
 				'@lib': path.resolve(__dirname, './src/lib'),
 			},
 		},
+		server: {
+			host: true,
+		},
 	});
 };
