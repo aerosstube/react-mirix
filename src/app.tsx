@@ -3,7 +3,6 @@ import { ChangeEvent, useEffect, useRef, useState } from 'react';
 
 export default function App() {
 	const videoRef = useRef<HTMLVideoElement>(null);
-	const containerRef = useRef<HTMLDivElement>(null);
 	const [currentQuality, setCurrentQuality] = useState('');
 	const [quality, setQuality] = useState(-1);
 	const [qualityOptions, setQualityOptions] = useState([
@@ -75,10 +74,8 @@ export default function App() {
 	};
 
 	const handleFullScreen = async () => {
-		await containerRef.current?.requestFullscreen();
+		await videoRef.current?.requestFullscreen();
 	};
-
-	console.log(videoRef.current?.duration);
 
 	return (
 		<>
@@ -86,7 +83,6 @@ export default function App() {
 			<div style={{ width: '100%' }}>
 				<Player
 					ref={videoRef}
-					containerRef={containerRef}
 					url={url}
 					level={quality}
 					onManifestParsed={handleParsed}

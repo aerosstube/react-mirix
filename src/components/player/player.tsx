@@ -55,12 +55,12 @@ import { MaxAutoLevelUpdatedData } from 'hls.js/dist/hls.js';
 import {
 	DetailedHTMLProps,
 	FC,
-	HTMLAttributes,
 	RefObject,
 	VideoHTMLAttributes,
 	useEffect,
 	useRef,
 } from 'react';
+import './player.css';
 
 export interface PlayerEvents {
 	onMediaAttaching?: (data: MediaAttachingData) => void;
@@ -129,11 +129,6 @@ export interface PlayerProps
 		PlayerEvents {
 	ref?: RefObject<HTMLVideoElement | null>;
 	hlsRef?: RefObject<Hls | null>;
-	containerRef?: RefObject<HTMLDivElement | null>;
-	container?: DetailedHTMLProps<
-		HTMLAttributes<HTMLDivElement>,
-		HTMLDivElement
-	>;
 	config?: Partial<HlsConfig>;
 	url?: string;
 	level?: number;
@@ -142,11 +137,11 @@ export interface PlayerProps
 export const Player: FC<PlayerProps> = ({
 	ref: videoRefProp,
 	hlsRef: hlsRefProp,
-	containerRef,
-	container,
+	className,
 	config,
 	url = '',
 	level = -1,
+	controls,
 	onMediaAttaching,
 	onMediaAttached,
 	onMediaDetaching,
@@ -279,20 +274,26 @@ export const Player: FC<PlayerProps> = ({
 	useEffect(() => hlsChangeLevel(hlsRef, level), [level]);
 
 	return (
-		<div ref={containerRef} {...container}>
-			<video
-				ref={videoRefProp ?? videoRef}
-				style={{
-					width: '100%',
-					height: '100%',
-					aspectRatio: '16 / 9',
-					objectFit: 'contain',
-					backgroundColor: '#000',
-				}}
-				{...rest}
-			>
-				<code>video</code> is not supported.
-			</video>
-		</div>
+		<video
+			ref={videoRefProp ?? videoRef}
+			className={
+				!controls
+					? className
+						? `hide-player-controls ${className}`
+						: 'hide-video-controls'
+					: className
+			}
+			style={{
+				width: '100%',
+				height: '100%',
+				aspectRatio: '16 / 9',
+				objectFit: 'contain',
+				backgroundColor: 'black',
+			}}
+			controls={controls}
+			{...rest}
+		>
+			<code>video</code> is not supported.
+		</video>
 	);
 };
