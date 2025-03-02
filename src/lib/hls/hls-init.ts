@@ -1,10 +1,10 @@
-import { PlayerEvents } from '@components/player';
+import { PlayerEvents } from '@types';
 import Hls, { HlsConfig } from 'hls.js';
-import { RefObject } from 'react';
+import { MutableRefObject } from 'react';
 
 interface HlsInitArgs extends PlayerEvents {
-	hlsRef: RefObject<Hls | null>;
-	videoRef: RefObject<HTMLVideoElement | null>;
+	hlsRef: MutableRefObject<Hls | null>;
+	videoRef: MutableRefObject<HTMLVideoElement | null>;
 	url: string;
 	config?: Partial<HlsConfig>;
 }

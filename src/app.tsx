@@ -1,5 +1,6 @@
-import { Player, PlayerProps } from '@components/player';
+import { Player } from '@components/player';
 import { formatTime } from '@lib/format-time';
+import { PlayerProps } from '@types';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 
 export default function App() {
@@ -13,22 +14,32 @@ export default function App() {
 	const [url, setUrl] = useState(
 		'/hls/solo-leveling-compilation/manifest.m3u8'
 	);
-	const [currentTime, setCurrentTime] = useState(0);
+	const [current, setCurrent] = useState<number | null>(null);
+	const [buffered, setBuffered] = useState<number | null>(null);
 
 	useEffect(() => {
 		const video = videoRef.current;
 		if (!video) return;
 
-		// Функция для обновления currentTime
 		const handleTimeUpdate = () => {
-			setCurrentTime(video.currentTime);
+			if (video.duration) setCurrent(video.currentTime);
+		};
+
+		const handleProgress = () => {
+			if (video.buffered.length > 0) {
+				setBuffered(video.buffered.end(video.buffered.length - 1));
+			}
 		};
 
 		video.addEventListener('timeupdate', handleTimeUpdate);
+		video.addEventListener('progress', handleProgress);
+		video.addEventListener('loadedmetadata', handleProgress);
 
 		return () => {
 			if (video) {
 				video.removeEventListener('timeupdate', handleTimeUpdate);
+				video.removeEventListener('progress', handleProgress);
+				video.removeEventListener('loadedmetadata', handleProgress);
 			}
 		};
 	}, []);
@@ -36,7 +47,7 @@ export default function App() {
 	const handleSeek = (event: ChangeEvent<HTMLInputElement>) => {
 		if (videoRef.current) {
 			videoRef.current.currentTime = parseFloat(event.target.value);
-			setCurrentTime(parseFloat(event.target.value));
+			setCurrent(parseFloat(event.target.value));
 		}
 	};
 
@@ -78,6 +89,17 @@ export default function App() {
 		}
 	};
 
+	const handlePausedChange = async () => {
+		const video = videoRef.current;
+		if (!video) return;
+
+		if (video.paused) {
+			await video.play();
+		} else {
+			video.pause();
+		}
+	};
+
 	return (
 		<>
 			<img src={'MIRIX.svg'} alt={''} />
@@ -92,13 +114,7 @@ export default function App() {
 					<code>video</code> is not supported.
 				</Player>
 			</div>
-			<button
-				onClick={() =>
-					videoRef?.current?.paused
-						? videoRef?.current?.play()
-						: videoRef?.current?.pause()
-				}
-			>
+			<button onClick={handlePausedChange}>
 				{videoRef?.current?.paused ? 'play' : 'pause'}
 			</button>
 			<input
@@ -110,12 +126,12 @@ export default function App() {
 				type='range'
 				min='0'
 				max={videoRef.current?.duration || 1} // max - длительность видео
-				value={currentTime}
+				value={current ?? 0}
 				onChange={handleSeek}
 				step='0.1'
 			/>
 			<p>
-				{`Current Time: ${formatTime(videoRef.current?.duration ? currentTime : undefined)} / ${formatTime(videoRef.current?.duration)}`}
+				{`Current Time: ${formatTime(current)} / ${formatTime(buffered)} / ${formatTime(videoRef.current?.duration)}`}
 			</p>
 			<button onClick={handleFullScreen}>fullscreen</button>
 			{qualityOptions.map((option) => (
