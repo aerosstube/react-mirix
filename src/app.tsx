@@ -1,4 +1,5 @@
 import { Player } from '@components/player';
+import { Button } from '@components/ui/button';
 import { formatTime } from '@lib/format-time';
 import { PlayerProps } from '@types';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
@@ -101,8 +102,8 @@ export default function App() {
 	};
 
 	return (
-		<>
-			<img src={'MIRIX.svg'} alt={''} />
+		<div className={'flex flex-col gap-2'}>
+			<img src={'MIRIX.svg'} alt={''} style={{ width: 300 }} />
 			<div ref={containerRef} style={{ width: '100%' }}>
 				<Player
 					ref={videoRef}
@@ -114,9 +115,9 @@ export default function App() {
 					<code>video</code> is not supported.
 				</Player>
 			</div>
-			<button onClick={handlePausedChange}>
+			<Button onClick={handlePausedChange}>
 				{videoRef?.current?.paused ? 'play' : 'pause'}
-			</button>
+			</Button>
 			<input
 				value={url}
 				style={{ width: '100%' }}
@@ -133,21 +134,27 @@ export default function App() {
 			<p>
 				{`Current Time: ${formatTime(current)} / ${formatTime(buffered)} / ${formatTime(videoRef.current?.duration)}`}
 			</p>
-			<button onClick={handleFullScreen}>fullscreen</button>
-			{qualityOptions.map((option) => (
-				<button
-					key={option.value}
-					style={{
-						padding: '9px 12px',
-						fontSize: 14,
-						lineHeight: 1,
-						borderColor: option.value === level ? 'red' : undefined,
-					}}
-					onClick={() => handleClick(option.value)}
-				>
-					{option.label}
-				</button>
-			))}
+
+			<Button onClick={handleFullScreen}>fullscreen</Button>
+			<div className={'flex gap-1'}>
+				{qualityOptions.map((option) => (
+					<Button
+						key={option.value}
+						style={{
+							padding: '9px 12px',
+							fontSize: 14,
+							lineHeight: 1,
+							border:
+								option.value === level
+									? '1px solid red'
+									: undefined,
+						}}
+						onClick={() => handleClick(option.value)}
+					>
+						{option.label}
+					</Button>
+				))}
+			</div>
 			<div
 				style={{
 					background: 'black',
@@ -159,6 +166,6 @@ export default function App() {
 			>
 				quality: {currentQuality}
 			</div>
-		</>
+		</div>
 	);
 }

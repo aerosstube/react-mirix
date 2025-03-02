@@ -3,20 +3,20 @@ import Hls, { HlsConfig } from 'hls.js';
 import { MutableRefObject } from 'react';
 
 interface HlsInitArgs extends PlayerEvents {
-	hlsRef: MutableRefObject<Hls | null>;
 	videoRef: MutableRefObject<HTMLVideoElement | null>;
+	hlsRef: MutableRefObject<Hls | null>;
 	url: string;
 	config?: Partial<HlsConfig>;
 }
 
 export const hlsInit = ({
-	hlsRef,
 	videoRef,
+	hlsRef,
 	url,
 	config,
 	...events
 }: HlsInitArgs) => {
-	const video = videoRef.current;
+	const video = videoRef?.current;
 	if (!video) return;
 
 	if (Hls.isSupported()) {
@@ -78,7 +78,7 @@ export const hlsInit = ({
 		});
 		hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
 			events.onManifestParsed?.(data);
-			video.play().catch((err) => {
+			video.play().catch((err: any) => {
 				console.error("Couldn't start video playback:", err);
 			});
 		});

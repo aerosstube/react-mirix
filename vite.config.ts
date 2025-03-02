@@ -1,4 +1,5 @@
 import path from 'path';
+import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react-swc';
 import { defineConfig } from 'vite';
 import checker from 'vite-plugin-checker';
@@ -11,7 +12,11 @@ interface ViteConfigInput {
 
 export default (args: ViteConfigInput) => {
 	const isProd = args.mode === 'production';
-	const prodPlugins = [react(), svgr({ svgrOptions: { icon: true } })];
+	const prodPlugins = [
+		react(),
+		tailwindcss(),
+		svgr({ svgrOptions: { icon: true } }),
+	];
 	const devPlugins = [
 		checker({
 			overlay: {

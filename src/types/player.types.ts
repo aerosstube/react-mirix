@@ -51,11 +51,7 @@ import Hls, {
 	SubtitleTrackSwitchData,
 	TrackLoadingData,
 } from 'hls.js';
-import {
-	DetailedHTMLProps,
-	MutableRefObject,
-	VideoHTMLAttributes,
-} from 'react';
+import { DetailedHTMLProps, ForwardedRef, VideoHTMLAttributes } from 'react';
 
 export interface PlayerEvents {
 	onMediaAttaching?: (data: MediaAttachingData) => void;
@@ -125,8 +121,7 @@ export interface PlayerProps
 			'ref'
 		>,
 		PlayerEvents {
-	ref?: MutableRefObject<HTMLVideoElement | null>;
-	hlsRef?: MutableRefObject<Hls | null>;
+	hlsRef?: ForwardedRef<Hls>;
 	config?: Partial<HlsConfig>;
 	url?: string;
 	level?: number;
