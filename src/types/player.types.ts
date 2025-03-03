@@ -113,12 +113,9 @@ export interface PlayerEvents {
 }
 
 export interface PlayerProps
-	extends Omit<
-			DetailedHTMLProps<
-				VideoHTMLAttributes<HTMLVideoElement>,
-				HTMLVideoElement
-			>,
-			'ref'
+	extends DetailedHTMLProps<
+			VideoHTMLAttributes<HTMLVideoElement>,
+			HTMLVideoElement
 		>,
 		PlayerEvents {
 	hlsRef?: ForwardedRef<Hls>;
