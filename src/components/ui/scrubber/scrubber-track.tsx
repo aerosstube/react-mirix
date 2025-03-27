@@ -17,7 +17,7 @@ const CL_BAR_SEEK = cn(
 );
 const CL_BAR_BUFFER = cn(CL_BAR, 'bg-secondary');
 const CL_POINT =
-    'absolute w-3 h-3 bg-primary opacity-0 rounded-full transition-opacity duration-150 ease-[ease] group-hover:opacity-100';
+    'absolute ring-ring/50 size-3 rounded-full bg-primary opacity-0 shadow-sm transition-opacity duration-150 ease-[ease] group-hover:opacity-100';
 const CL_TIME_DISPLAY =
     'absolute bg-inner-primary rounded-sm text-xs leading-none p-(--scrubber-track-hover-time-padding) opacity-0 transition-opacity duration-150 ease-[ease] group-hover:opacity-100';
 
@@ -30,7 +30,6 @@ export const ScrubberTrack: FC<ScrubberTrackProps> = ({
 }) => {
     const trackRef = useRef<HTMLDivElement>(null);
     const [seek, setSeek] = useState(0);
-    // const [isSeeking, setIsSeeking] = useState(false);
 
     const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
         if (current === null || duration === null || !trackRef.current) return;
@@ -57,7 +56,6 @@ export const ScrubberTrack: FC<ScrubberTrackProps> = ({
         };
 
         const handlePointerUp = () => {
-            console.log(lastTime);
             onSeekCommit?.(lastTime);
 
             trackRef.current?.releasePointerCapture(e.pointerId);

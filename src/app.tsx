@@ -4,11 +4,15 @@ import { Button, Scrubber, Slider } from '@components/ui';
 import { Icon } from '@components/ui/icon';
 import { clampMax, clampMin } from '@lib/clamp';
 import { debounce } from '@lib/debounce';
+import { getStorageMuted, getStorageVolume } from '@lib/storage';
 import { cn } from '@lib/utils';
 import { SliderProps } from '@radix-ui/react-slider';
 import { PlayerProps, ScrubberProps } from '@types';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
+
+const initialVolume = getStorageVolume();
+const initialMuted = getStorageMuted();
 
 export default function App() {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -21,15 +25,16 @@ export default function App() {
     const [searchParams, setSearchParams] = useSearchParams();
     const videoUrl = searchParams.get('video-url') ?? '';
     const [current, setCurrent] = useState<number | null>(null);
+    const currentRef = useRef(0);
     const [buffer, setBuffer] = useState<{ start: number; end: number }[]>([]);
-    const [volume, setVolume] = useState(1);
-    const [muted, setMuted] = useState(false);
+    const [volume, setVolume] = useState(initialMuted ? 0 : initialVolume);
+    const [muted, setMuted] = useState(initialMuted);
+    const [isPIP, setIsPIP] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isPaused, setIsPaused] = useState(true);
     const [isSeeking, setIsSeeking] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
     const [preventHide, setPreventHide] = useState(true);
-
-    const [isVisible, setIsVisible] = useState(true);
     const hideTimerRef = useRef<number | null>(null);
 
     const resetHideTimer = () => {
@@ -48,6 +53,7 @@ export default function App() {
     const handleSeek: ScrubberProps['onSeek'] = (value) => {
         setIsSeeking(true);
         setCurrent(value);
+        currentRef.current = value;
     };
 
     const handleSeekCommit: ScrubberProps['onSeekCommit'] = (value) => {
@@ -56,10 +62,6 @@ export default function App() {
 
         videoRef.current.currentTime = value;
         setIsSeeking(false);
-    };
-
-    const handleClick = (level: number) => {
-        setLevel(level);
     };
 
     const handleManifestParsed: PlayerProps['onManifestParsed'] = (data) => {
@@ -79,35 +81,6 @@ export default function App() {
         setCurrentQuality(`${level.height}p`);
     };
 
-    const handleFullScreen = async () => {
-        const container = containerRef.current;
-        const video = videoRef.current;
-        if (!(video && container)) return;
-
-        const fullscreen =
-            document.fullscreenElement ||
-            // @ts-ignore
-            document.webkitFullscreenElement;
-
-        setIsFullscreen(!fullscreen);
-
-        if (navigator.userAgent.indexOf('iPhone') !== -1) {
-            if (fullscreen) {
-                // @ts-ignore
-                await video.webkitExitFullscreen();
-            } else {
-                // @ts-ignore
-                await video.webkitEnterFullscreen();
-            }
-        } else {
-            if (fullscreen) {
-                await document.exitFullscreen();
-            } else {
-                await container.requestFullscreen();
-            }
-        }
-    };
-
     const handlePausedChange = async () => {
         const video = videoRef.current;
         if (!video) return;
@@ -122,7 +95,12 @@ export default function App() {
     const handleTimeUpdate: PlayerProps['onTimeUpdate'] = (e) => {
         const video = e.currentTarget;
 
-        if (video.duration && !isSeeking) setCurrent(video.currentTime);
+        if (video.duration && !isSeeking) {
+            const value = video.currentTime;
+
+            setCurrent(value);
+            currentRef.current = value;
+        }
     };
 
     const handleProgress: PlayerProps['onProgress'] = (e) => {
@@ -152,8 +130,68 @@ export default function App() {
     const handleVolumeChange: PlayerProps['onVolumeChange'] = (e) => {
         const video = e.currentTarget;
 
-        setVolume(e.currentTarget.volume);
-        setMuted(e.currentTarget.muted);
+        setVolume(video.muted ? 0 : video.volume);
+        setMuted(video.muted);
+    };
+
+    const handleVolumeSliderChange: SliderProps['onValueChange'] = (_value) => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        const value = _value.at(0) ?? 0;
+
+        video.volume = value;
+
+        if (value > 0 && video.muted) {
+            video.muted = false;
+            setMuted(false);
+        }
+    };
+
+    const handleVolumeSliderCommit: SliderProps['onValueCommit'] = (value) => {
+        localStorage.setItem('volume', `${value[0]}`);
+    };
+
+    const handleMute = () => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        video.muted = !video.muted;
+        localStorage.setItem('muted', `${video.muted}`);
+    };
+
+    const handlePIP = async () => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        await video.requestPictureInPicture();
+    };
+
+    const handleFullScreen = async () => {
+        const container = containerRef.current;
+        const video = videoRef.current;
+        if (!(container && video)) return;
+
+        const fullscreen =
+            document.fullscreenElement ||
+            // @ts-ignore
+            document.webkitFullscreenElement;
+
+        if (navigator.userAgent.indexOf('iPhone') !== -1) {
+            if (fullscreen) {
+                // @ts-ignore
+                await video.webkitExitFullscreen();
+            } else {
+                // @ts-ignore
+                await video.webkitEnterFullscreen();
+            }
+        } else {
+            if (fullscreen) {
+                await document.exitFullscreen();
+            } else {
+                await container.requestFullscreen();
+            }
+        }
     };
 
     const handleMouseEnter = () => {
@@ -164,52 +202,66 @@ export default function App() {
         if (!isPaused) setPreventHide(false);
     };
 
-    const handleVolumeSliderChange: SliderProps['onValueChange'] = (value) => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        const volume = value?.[0] ?? 0;
-
-        video.volume = volume;
-        if (volume > 0 && videoRef.current.muted) {
-            videoRef.current.muted = false;
-            setMuted(false);
-        }
-    };
-
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
 
-        const currentRef = { current: video.currentTime };
-
         const debouncedUpdateTime = debounce((time: number) => {
             video.currentTime = time;
             setIsSeeking(false);
-        }, 200);
+        }, 300);
 
         const handleKeyDown = async (e: KeyboardEvent) => {
             console.log(e.key);
             if (video.currentTime !== undefined && video.duration) {
-                if (e.key === 'ArrowLeft') {
-                    setIsSeeking(true);
-                    resetHideTimer();
-                    const newTime = clampMin(currentRef.current - 10, 0);
-                    currentRef.current = newTime;
-                    setCurrent(newTime);
-                }
-                if (e.key === 'ArrowRight') {
-                    setIsSeeking(true);
-                    resetHideTimer();
-                    const newTime = clampMax(
-                        currentRef.current + 10,
-                        video.duration
-                    );
-                    currentRef.current = newTime;
-                    setCurrent(newTime);
-                }
-                if (e.key === ' ') {
-                    await handlePausedChange();
+                switch (e.key) {
+                    case 'ArrowLeft': {
+                        resetHideTimer();
+                        setIsSeeking(true);
+
+                        const value = clampMin(currentRef.current - 10, 0);
+
+                        currentRef.current = value;
+                        setCurrent(value);
+
+                        break;
+                    }
+                    case 'ArrowRight': {
+                        resetHideTimer();
+                        setIsSeeking(true);
+
+                        const value = clampMax(
+                            currentRef.current + 10,
+                            video.duration
+                        );
+
+                        currentRef.current = value;
+                        setCurrent(value);
+
+                        break;
+                    }
+                    case 'i': {
+                        await handlePIP();
+
+                        break;
+                    }
+                    case 'f': {
+                        resetHideTimer();
+                        await handleFullScreen();
+
+                        break;
+                    }
+                    case 'm': {
+                        resetHideTimer();
+                        handleMute();
+
+                        break;
+                    }
+                    case ' ': {
+                        await handlePausedChange();
+
+                        break;
+                    }
                 }
             }
         };
@@ -223,9 +275,58 @@ export default function App() {
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
 
+        resetHideTimer();
+
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, [preventHide]);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        video.volume = initialVolume;
+        video.muted = initialMuted;
+
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+
+        const handleEnterPIP = () => {
+            setIsPIP(true);
+        };
+
+        const handleLeavePIP = () => {
+            setIsPIP(false);
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener(
+            'webkitfullscreenchange',
+            handleFullscreenChange
+        );
+        document.addEventListener('enterpictureinpicture', handleEnterPIP);
+        document.addEventListener('leavepictureinpicture', handleLeavePIP);
+
+        return () => {
+            document.removeEventListener(
+                'fullscreenchange',
+                handleFullscreenChange
+            );
+            document.removeEventListener(
+                'webkitfullscreenchange',
+                handleFullscreenChange
+            );
+            document.removeEventListener(
+                'enterpictureinpicture',
+                handleEnterPIP
+            );
+            document.removeEventListener(
+                'leavepictureinpicture',
+                handleLeavePIP
+            );
         };
     }, []);
 
@@ -238,20 +339,18 @@ export default function App() {
         }
     }, [videoUrl, setSearchParams]);
 
-    useEffect(() => {
-        resetHideTimer();
-    }, [preventHide]);
-
     return (
         <div
             ref={containerRef}
-            className={'relative w-full'}
+            className={'relative w-full h-screen'}
             style={{ cursor: !isVisible ? 'none' : '' }}
             onMouseMove={resetHideTimer}
             onClick={handlePausedChange}
+            onDoubleClick={handleFullScreen}
         >
             <Player
                 ref={videoRef}
+                className={'opacity-100'}
                 url={videoUrl}
                 level={level}
                 onManifestParsed={handleManifestParsed}
@@ -273,92 +372,75 @@ export default function App() {
                 <div
                     className={cn(
                         'mb-8 transition-transform translate-y-4',
-                        isVisible && 'translate-y-0'
+                        isVisible && !isPIP && 'translate-y-0'
                     )}
                 >
                     <Controls
                         className={cn(
                             'transition-opacity opacity-0',
-                            isVisible && 'opacity-100'
+                            isVisible && !isPIP && 'opacity-100'
                         )}
                         onClick={(e) => e.stopPropagation()}
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
                     >
-                        <div
-                            className={
-                                'flex justify-between items-center w-full'
-                            }
-                        >
-                            <Button className={'flex w-[332px]'}>
-                                <div
-                                    className={
-                                        'w-full flex items-center justify-between'
-                                    }
-                                >
-                                    <div
-                                        className={'flex items-center gap-1.5'}
+                        <div className={'w-full h-10 flex items-center'}>
+                            <div className={'w-full flex items-center gap-4'}>
+                                <div className={'flex items-center gap-2'}>
+                                    <Button
+                                        variant={'text'}
+                                        size={'icon-lg'}
+                                        onClick={handleMute}
                                     >
-                                        <Icon type={'playlist'} />
-                                        Название эпизода • N эп.
-                                    </div>
-                                    <Icon
-                                        className={'text-xs'}
-                                        type={'caret'}
+                                        <Icon
+                                            type={
+                                                !muted
+                                                    ? volume > 0
+                                                        ? volume > 0.5
+                                                            ? 'volume'
+                                                            : 'volume-half'
+                                                        : 'volume-none'
+                                                    : 'volume-muted'
+                                            }
+                                        />
+                                    </Button>
+                                    <Slider
+                                        className={'w-24 py-[9px]'}
+                                        value={[volume]}
+                                        min={0}
+                                        max={1}
+                                        step={0.01}
+                                        onValueChange={handleVolumeSliderChange}
+                                        onValueCommit={handleVolumeSliderCommit}
                                     />
                                 </div>
-                            </Button>
-                            <Button
-                                className={
-                                    'text-[40px] transition-transform hover:scale-110'
-                                }
-                                variant={'text-active'}
-                                size={'icon-lg'}
-                                onClick={handlePausedChange}
-                            >
-                                <Icon type={isPaused ? 'play' : 'pause'} />
-                            </Button>
+                            </div>
                             <div className={'flex items-center gap-4'}>
-                                <div
+                                <Button
                                     className={
-                                        'absolute top-[-40px] flex gap-1'
+                                        'text-[40px] transition-transform hover:scale-110'
                                     }
+                                    variant={'text-active'}
+                                    size={'icon-lg'}
+                                    onClick={handlePausedChange}
                                 >
-                                    {qualityOptions.map((option) => (
-                                        <Button
-                                            key={option.value}
-                                            variant={
-                                                level === option.value
-                                                    ? 'destructive'
-                                                    : 'default'
-                                            }
-                                            onClick={() =>
-                                                handleClick(option.value)
-                                            }
-                                        >
-                                            {option.label}
-                                        </Button>
-                                    ))}
-                                </div>
-                                <Button className={'w-[52px] px-0'} size={'sm'}>
+                                    <Icon type={isPaused ? 'play' : 'pause'} />
+                                </Button>
+                            </div>
+                            <div
+                                className={
+                                    'w-full flex items-center justify-end gap-4'
+                                }
+                            >
+                                <Button
+                                    className={cn(
+                                        'w-[52px] px-0 opacity-0',
+                                        currentQuality && 'opacity-100'
+                                    )}
+                                    size={'sm'}
+                                >
                                     {currentQuality}
                                 </Button>
-                                <Button
-                                    variant={'text'}
-                                    size={'icon-lg'}
-                                    // onClick={handleFullScreen}
-                                >
-                                    <Icon type={'volume'} />
-                                </Button>
-                                <Slider
-                                    className={'w-16'}
-                                    value={[volume]}
-                                    min={0}
-                                    max={1}
-                                    step={0.01}
-                                    onValueChange={handleVolumeSliderChange}
-                                />
-                                {muted && 'muted'}
                                 <Button
                                     variant={'text'}
                                     size={'icon-lg'}
@@ -369,14 +451,7 @@ export default function App() {
                                 <Button
                                     variant={'text'}
                                     size={'icon-lg'}
-                                    // onClick={handleFullScreen}
-                                >
-                                    <Icon type={'share'} />
-                                </Button>
-                                <Button
-                                    variant={'text'}
-                                    size={'icon-lg'}
-                                    // onClick={handleFullScreen}
+                                    onClick={handlePIP}
                                 >
                                     <Icon type={'pip'} />
                                 </Button>
